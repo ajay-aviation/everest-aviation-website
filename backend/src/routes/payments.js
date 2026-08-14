@@ -44,7 +44,7 @@ router.post('/create-order', async (req, res) => {
 
 // POST /api/payments/verify
 // body: { razorpay_order_id, razorpay_payment_id, razorpay_signature, name, email, course }
-router.post('/verify', (req, res) => {
+router.post('/verify', async (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature, name, email, course } = req.body || {};
   const key_secret = process.env.RAZORPAY_KEY_SECRET;
 
@@ -60,14 +60,18 @@ router.post('/verify', (req, res) => {
   const isValid = expected === razorpay_signature;
 
   if (isValid) {
-    db.insert('payments', {
-      razorpay_order_id,
-      razorpay_payment_id,
-      name: name || '',
-      email: email || '',
-      course: course || '',
-      verifiedAt: new Date().toISOString()
-    });
+    try {
+      await db.insert('payments', {
+        razorpay_order_id,
+        razorpay_payment_id,
+        name: name || '',
+        email: email || '',
+        course: course || '',
+        verifiedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      // Payment is still valid even if the save fails — don't block the response
+    }
   }
 
   res.json({ ok: isValid, verified: isValid });

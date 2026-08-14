@@ -15,7 +15,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[0-9+\-\s]{7,15}$/;
 
 // POST /api/enquiries — public, called from the contact form
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { name, email, phone, course, message, website } = req.body || {};
 
   // Honeypot — real users never fill this hidden field, only bots do
@@ -28,25 +28,33 @@ router.post('/', (req, res) => {
   if (!phone || !PHONE_RE.test(phone)) return res.status(400).json({ ok: false, error: 'Valid phone number is required' });
   if (!course || !course.trim()) return res.status(400).json({ ok: false, error: 'Please select a course' });
 
-  const saved = db.insert('enquiries', {
-    name: name.trim(),
-    email: email.trim(),
-    phone: phone.trim(),
-    course: course.trim(),
-    message: (message || '').trim(),
-    submittedAt: new Date().toISOString()
-  });
+  try {
+    const saved = await db.insert('enquiries', {
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      course: course.trim(),
+      message: (message || '').trim(),
+      submittedAt: new Date().toISOString()
+    });
 
-  res.status(201).json({ ok: true, id: saved.id });
+    res.status(201).json({ ok: true, id: saved.id });
 
-  // Fire-and-forget — don't delay the response waiting on email delivery
-  sendEnquiryNotification(saved);
+    // Fire-and-forget — don't delay the response waiting on email delivery
+    sendEnquiryNotification(saved);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: 'Could not save enquiry. Please try again.' });
+  }
 });
 
 // GET /api/enquiries — admin only, requires x-admin-key header
-router.get('/', requireAdmin, (req, res) => {
-  const all = db.readAll('enquiries').sort((a, b) => (a.submittedAt < b.submittedAt ? 1 : -1));
-  res.json({ ok: true, count: all.length, enquiries: all });
+router.get('/', requireAdmin, async (req, res) => {
+  try {
+    const all = (await db.readAll('enquiries')).sort((a, b) => (a.submittedAt < b.submittedAt ? 1 : -1));
+    res.json({ ok: true, count: all.length, enquiries: all });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: 'Could not load enquiries' });
+  }
 });
 
 module.exports = router;
