@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { sendEnquiryNotification } = require('../email');
+const { sendEnquiryNotification, sendStudentConfirmation } = require('../email');
 
 function requireAdmin(req, res, next) {
   const key = req.header('x-admin-key');
@@ -42,6 +42,7 @@ router.post('/', async (req, res) => {
 
     // Fire-and-forget — don't delay the response waiting on email delivery
     sendEnquiryNotification(saved);
+    sendStudentConfirmation(saved);
   } catch (err) {
     res.status(500).json({ ok: false, error: 'Could not save enquiry. Please try again.' });
   }

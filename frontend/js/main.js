@@ -1,5 +1,5 @@
 // ===== Change this to your deployed backend URL when going live =====
-const API_BASE = 'https://everest-aviation-website.onrender.com';
+const API_BASE = 'http://localhost:5000';
 
 // Sticky topbar state
 const topbar = document.getElementById('topbar');

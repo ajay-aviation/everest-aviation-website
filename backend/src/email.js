@@ -40,4 +40,39 @@ async function sendEnquiryNotification(entry) {
   }
 }
 
-module.exports = { sendEnquiryNotification };
+// Sends a confirmation email to the student who submitted the enquiry —
+// reassures them it went through, without waiting on a human reply.
+// Also fire-and-forget; a failure here should never affect the saved enquiry.
+async function sendStudentConfirmation(entry) {
+  const transporter = getTransporter();
+  if (!transporter) return { sent: false, reason: 'Email not configured' };
+  if (!entry.email) return { sent: false, reason: 'No student email' };
+
+  try {
+    await transporter.sendMail({
+      from: `"Everest Aviation Academy" <${process.env.EMAIL_USER}>`,
+      to: entry.email,
+      subject: `We've received your enquiry — Everest Aviation Academy`,
+      text: [
+        `Hi ${entry.name},`,
+        ``,
+        `Thank you for reaching out to Everest Aviation Academy! We've received your enquiry for:`,
+        ``,
+        `Course: ${entry.course}`,
+        ``,
+        `Our admissions team will contact you shortly at ${entry.phone || entry.email} to guide you through the next steps.`,
+        ``,
+        `If you have any urgent questions in the meantime, feel free to call us at +91 90330 21835 or reply to this email.`,
+        ``,
+        `Warm regards,`,
+        `Everest Aviation Academy`,
+        `E 404, Galaxy Arcade, Opp. Galaxy Cinema, Naroda, Ahmedabad – 382330`
+      ].join('\n')
+    });
+    return { sent: true };
+  } catch (err) {
+    return { sent: false, reason: 'Send failed' };
+  }
+}
+
+module.exports = { sendEnquiryNotification, sendStudentConfirmation };
